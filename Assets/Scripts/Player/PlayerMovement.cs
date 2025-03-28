@@ -10,6 +10,7 @@ public class PlayerMovement : MonoBehaviour
     public ParticleSystem smokeFX;
     public ParticleSystem speedFX;
     BoxCollider2D playerCollider;
+    TrailRenderer trailRenderer;
 
     [Header("Movement")]
     public float moveSpeed = 5f;
@@ -22,12 +23,13 @@ public class PlayerMovement : MonoBehaviour
     public float dashCooldown = 0.1f;
     bool isDashing;
     bool canDash = true;
-    TrailRenderer trailRenderer;
 
     [Header("Jumping")]
     public float jumpPower = 10f;
     public int maxJumps = 2;
     private int jumpsRemaining;
+    private float coyoteTime = 0.1f;
+    private float coyoteTimeCounter;
 
     [Header("GroundCheck")]
     public Transform groundCheckPos;
@@ -50,7 +52,6 @@ public class PlayerMovement : MonoBehaviour
     public float wallSlideSpeed = 2;
     bool isWallSliding;
 
-    //Wall Jumping
     bool isWallJumping;
     float wallJumpDirection;
     float wallJumpTime = 0.5f;
@@ -65,14 +66,14 @@ public class PlayerMovement : MonoBehaviour
         speedFX.Stop();
     }
 
-    void StartSpeedBoost(float multiplyer)
+    void StartSpeedBoost(float multiplier)
     {
-        StartCoroutine(SpeedBoostCoroutine(multiplyer));
+        StartCoroutine(SpeedBoostCoroutine(multiplier));
     }
 
-    private IEnumerator SpeedBoostCoroutine(float multiplyer)
+    private IEnumerator SpeedBoostCoroutine(float multiplier)
     {
-        speedMultiplyer = multiplyer;
+        speedMultiplyer = multiplier;
         speedFX.Play();
         yield return new WaitForSeconds(2f);
         speedMultiplyer = 1f;
@@ -85,15 +86,17 @@ public class PlayerMovement : MonoBehaviour
         animator.SetFloat("magnitude", rb.velocity.magnitude > 0.1 ? 1 : 0);
         animator.SetBool("isWallSliding", isWallSliding);
 
-        if (isDashing)
-        {
-            return;
-        }
+        if (isDashing) return;
+
         GroundCheck();
         ProcessGravity();
         ProcessWallSlide();
         ProcessWallJump();
+        ProcessMovement();
+    }
 
+    private void ProcessMovement()
+    {
         if (!isWallJumping)
         {
             rb.velocity = new Vector2(horizontalMovement * moveSpeed * speedMultiplyer, rb.velocity.y);
@@ -108,7 +111,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void Dash(InputAction.CallbackContext context)
     {
-        if(context.performed && canDash)
+        if (context.performed && canDash)
         {
             StartCoroutine(DashCoroutine());
         }
@@ -116,7 +119,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void Drop(InputAction.CallbackContext context)
     {
-        if(context.performed && isGrounded && isOnPlatform)
+        if (context.performed && isGrounded && isOnPlatform)
         {
             StartCoroutine(DisablePlayerCollider(0.25f));
         }
@@ -151,38 +154,26 @@ public class PlayerMovement : MonoBehaviour
         {
             if (context.performed)
             {
-                //Hold down jump button = full height
                 rb.velocity = new Vector2(rb.velocity.x, jumpPower);
                 jumpsRemaining--;
                 JumpFX();
             }
             else if (context.canceled && rb.velocity.y > 0)
             {
-                //Light tap of jump button = half the height
                 rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.5f);
                 jumpsRemaining--;
                 JumpFX();
             }
         }
 
-        //Wall jump
         if (context.performed && wallJumpTimer > 0f)
         {
             isWallJumping = true;
-            rb.velocity = new Vector2(wallJumpDirection * wallJumpPower.x, wallJumpPower.y); //Jump away from wall
+            rb.velocity = new Vector2(wallJumpDirection * wallJumpPower.x, wallJumpPower.y);
             wallJumpTimer = 0;
             JumpFX();
-
-            //Force flip
-            if (transform.localScale.x != wallJumpDirection)
-            {
-                isFacingRight = !isFacingRight;
-                Vector3 ls = transform.localScale;
-                ls.x *= -1f;
-                transform.localScale = ls;
-            }
-
-            Invoke(nameof(CancelWallJump), wallJumpTime + 0.1f); //Wall Jump = 0.5f -- Jump again = 0.6f
+            Flip(); // Flip immediately when wall jumping
+            Invoke(nameof(CancelWallJump), wallJumpTime + 0.1f);
         }
     }
 
@@ -194,13 +185,11 @@ public class PlayerMovement : MonoBehaviour
         trailRenderer.emitting = true;
 
         float dashDirection = isFacingRight ? 1f : -1f;
-
-        rb.velocity = new Vector2(dashDirection * dashSpeed, rb.velocity.y); //Dash movement
+        rb.velocity = new Vector2(dashDirection * dashSpeed, rb.velocity.y);
 
         yield return new WaitForSeconds(dashDuration);
 
-        rb.velocity = new Vector2(0f, rb.velocity.y); //Reset horizontal velocity
-
+        rb.velocity = new Vector2(0f, rb.velocity.y);
         isDashing = false;
         trailRenderer.emitting = false;
         Physics2D.IgnoreLayerCollision(7, 8, false);
@@ -217,14 +206,16 @@ public class PlayerMovement : MonoBehaviour
 
     private void GroundCheck()
     {
-        if (Physics2D.OverlapBox(groundCheckPos.position, groundCheckSize, 0, groundLayer)) //checks if set box overlaps with ground
+        if (Physics2D.OverlapBox(groundCheckPos.position, groundCheckSize, 0, groundLayer))
         {
             jumpsRemaining = maxJumps;
             isGrounded = true;
+            coyoteTimeCounter = coyoteTime;
         }
         else
         {
             isGrounded = false;
+            coyoteTimeCounter -= Time.deltaTime;
         }
     }
 
@@ -235,11 +226,10 @@ public class PlayerMovement : MonoBehaviour
 
     private void ProcessGravity()
     {
-        //falling gravity
         if (rb.velocity.y < 0)
         {
-            rb.gravityScale = baseGravity * fallGravityMult; //fall faster and faster
-            rb.velocity = new Vector2(rb.velocity.x, Mathf.Max(rb.velocity.y, -maxFallSpeed)); //max fall speed
+            rb.gravityScale = baseGravity * fallGravityMult;
+            rb.velocity = new Vector2(rb.velocity.x, Mathf.Max(rb.velocity.y, -maxFallSpeed));
         }
         else
         {
@@ -249,10 +239,10 @@ public class PlayerMovement : MonoBehaviour
 
     private void ProcessWallSlide()
     {
-        if (!isGrounded & WallCheck() & horizontalMovement != 0)
+        if (!isGrounded && WallCheck() && horizontalMovement != 0)
         {
             isWallSliding = true;
-            rb.velocity = new Vector2(rb.velocity.x, Mathf.Max(rb.velocity.y, -wallSlideSpeed)); //Caps fall rate
+            rb.velocity = new Vector2(rb.velocity.x, Mathf.Max(rb.velocity.y, -wallSlideSpeed));
         }
         else
         {
@@ -266,9 +256,7 @@ public class PlayerMovement : MonoBehaviour
         {
             isWallJumping = false;
             wallJumpDirection = -transform.localScale.x;
-            wallJumpTimer = wallJumpTime;
-
-            CancelInvoke(nameof(CancelWallJump));
+            wallJumpTimer = wallJumpTime + 0.1f;
         }
         else if (wallJumpTimer > 0f)
         {
@@ -291,7 +279,7 @@ public class PlayerMovement : MonoBehaviour
             transform.localScale = ls;
             speedFX.transform.localScale = ls;
 
-            if(rb.velocity.y == 0)
+            if (rb.velocity.y == 0)
             {
                 smokeFX.Play();
             }
@@ -300,7 +288,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        //Ground check visual
         Gizmos.color = Color.white;
         Gizmos.DrawWireCube(groundCheckPos.position, groundCheckSize);
         Gizmos.color = Color.blue;

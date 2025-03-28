@@ -12,7 +12,7 @@ public class ObjectSpawner : MonoBehaviour
     public GameObject[] objectPrefabs; //0=SmallCoin, 1=BigCoin, 2=Enemy
     public float bigCoinProbibility = 0.2f; //20% chance of spawning big coin
     public float enemyProbibility = 0.1f;
-    public int maxObjects = 5;
+    public int maxObjects = 2;
     public float CoinLifeTime = 10f; //Only for coins
     public float spawnInterval = 0.5f;
 
