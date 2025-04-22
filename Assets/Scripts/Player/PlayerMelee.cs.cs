@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMelee : MonoBehaviour
@@ -12,22 +11,27 @@ public class PlayerMelee : MonoBehaviour
     private float cooldownTimer = 0f;
 
     public int attackDamage = 25;
+    [HideInInspector] public int defaultAttackDamage;
 
     public Animator animator;
+
+    private void Start()
+    {
+        defaultAttackDamage = attackDamage;
+    }
 
     private void Update()
     {
         if (cooldownTimer <= 0)
         {
-            if (Input.GetKey(KeyCode.R))
+            if (Input.GetKey(KeyCode.E))
             {
-                // Example of playing attack animation
-                // animator.SetTrigger("Melee");
-
                 Collider2D[] enemiesInRange = Physics2D.OverlapCircleAll(attackOrigin.position, attackRadius, enemyMask);
                 foreach (var enemy in enemiesInRange)
                 {
-                    enemy.GetComponent<HealthManager>().TakeDamage(attackDamage, transform.position);
+                    enemy.GetComponent<HealthManager>().TakeDamage(attackDamage, transform.position, gameObject);
+                    SoundEffectManager.Play("Bite");
+                    MusicManager.OnPlayerAttack();
                 }
 
                 cooldownTimer = cooldownTime;

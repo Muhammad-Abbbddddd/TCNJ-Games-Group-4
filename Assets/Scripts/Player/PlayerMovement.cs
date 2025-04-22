@@ -58,8 +58,16 @@ public class PlayerMovement : MonoBehaviour
     float wallJumpTimer;
     public Vector2 wallJumpPower = new Vector2(5f, 10f);
 
+    private bool isPlayingFootsteps = false;
+
+    [HideInInspector] public float defaultMoveSpeed;
+    [HideInInspector] public float defaultJumpPower;
+
+
     private void Start()
     {
+        defaultMoveSpeed = moveSpeed;
+        defaultJumpPower = jumpPower;
         trailRenderer = GetComponent<TrailRenderer>();
         playerCollider = GetComponent<BoxCollider2D>();
         SpeedItem.OnSpeedCollected += StartSpeedBoost;
@@ -93,6 +101,8 @@ public class PlayerMovement : MonoBehaviour
         ProcessWallSlide();
         ProcessWallJump();
         ProcessMovement();
+        HandleFootstepSounds();
+
     }
 
     private void ProcessMovement()
@@ -121,7 +131,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (context.performed && isGrounded && isOnPlatform)
         {
-            StartCoroutine(DisablePlayerCollider(0.25f));
+            StartCoroutine(DisablePlayerCollider(0.35f));
         }
     }
 
@@ -268,6 +278,32 @@ public class PlayerMovement : MonoBehaviour
     {
         isWallJumping = false;
     }
+
+    
+
+    private void HandleFootstepSounds()
+    {
+        bool isMovingHorizontally = Mathf.Abs(horizontalMovement) > 0.1f;
+        bool isOnGroundAndNotDashing = isGrounded && !isDashing && Mathf.Abs(rb.velocity.y) < 0.1f;
+
+        if (isMovingHorizontally && isOnGroundAndNotDashing)
+        {
+            if (!isPlayingFootsteps)
+            {
+                SoundEffectManager.Play("Walk");
+                isPlayingFootsteps = true;
+            }
+        }
+        else
+        {
+            if (isPlayingFootsteps)
+            {
+                SoundEffectManager.Play("Walk");
+                isPlayingFootsteps = false;
+            }
+        }
+    }
+
 
     private void Flip()
     {

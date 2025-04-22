@@ -81,8 +81,8 @@
     <Compile Include="Assets\AstarPathfindingProject\Generators\Utilities\EuclideanEmbedding.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Generators\NodeClasses\GridNodeBase.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\Misc\NodeLink.cs" />
-    <Compile Include="Assets\AstarPathfindingProject\Generators\Base.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\GraphUpdateShape.cs" />
+    <Compile Include="Assets\AstarPathfindingProject\Generators\Base.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Modifiers\RaycastModifier.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\Serialization\JsonSerializer.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\AI\AIPath.cs" />
@@ -96,8 +96,8 @@
     <Compile Include="Assets\AstarPathfindingProject\Utilities\ProceduralGridMover.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\Misc\ArrayPool.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Generators\Utilities\PointKDTree.cs" />
-    <Compile Include="Assets\AstarPathfindingProject\Modifiers\Modifiers.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Utilities\ProfileHelper.cs" />
+    <Compile Include="Assets\AstarPathfindingProject\Modifiers\Modifiers.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Generators\NodeClasses\PointNode.cs" />
     <Compile Include="Assets\AstarPathfindingProject\PackageTools\EnumFlagAttribute.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Generators\Utilities\BBTree.cs" />
@@ -135,8 +135,8 @@
     <Compile Include="Assets\AstarPathfindingProject\Generators\Utilities\GraphTransform.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\Misc\GraphUpdateProcessor.cs" />
     <Compile Include="Assets\AstarPathfindingProject\ExampleScenes\ExampleScripts\ObjectPlacer.cs" />
-    <Compile Include="Assets\AstarPathfindingProject\Modifiers\AlternativePath.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\Misc\PathReturnQueue.cs" />
+    <Compile Include="Assets\AstarPathfindingProject\Modifiers\AlternativePath.cs" />
     <Compile Include="Assets\AstarPathfindingProject\ExampleScenes\ExampleScripts\SnapToNode.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Navmesh\NavmeshUpdates.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Utilities\GraphGizmoHelper.cs" />
@@ -170,8 +170,8 @@
     <Compile Include="Assets\AstarPathfindingProject\Utilities\Funnel.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Modifiers\StartEndModifier.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Utilities\AstarChecksum.cs" />
-    <Compile Include="Assets\AstarPathfindingProject\Core\Misc\WorkItemProcessor.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\AI\Seeker.cs" />
+    <Compile Include="Assets\AstarPathfindingProject\Core\Misc\WorkItemProcessor.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Core\Misc\NodeLink2.cs" />
     <Compile Include="Assets\AstarPathfindingProject\Legacy\Editor\LegacyAIPathEditor.cs" />
   </ItemGroup>
