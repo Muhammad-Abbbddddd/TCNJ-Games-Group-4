@@ -26,15 +26,7 @@ public class PlayerMelee : MonoBehaviour
         {
             if (Input.GetKey(KeyCode.E))
             {
-                Collider2D[] enemiesInRange = Physics2D.OverlapCircleAll(attackOrigin.position, attackRadius, enemyMask);
-                foreach (var enemy in enemiesInRange)
-                {
-                    enemy.GetComponent<HealthManager>().TakeDamage(attackDamage, transform.position, gameObject);
-                    SoundEffectManager.Play("Bite");
-                    MusicManager.OnPlayerAttack();
-                }
-
-                cooldownTimer = cooldownTime;
+                AttackEnemy(attackOrigin, attackRadius, "Bite", enemyMask, attackDamage, transform.position, gameObject, cooldownTime, out cooldownTimer);
             }
         }
         else
@@ -42,6 +34,39 @@ public class PlayerMelee : MonoBehaviour
             cooldownTimer -= Time.deltaTime;
         }
     }
+    
+    public static void AttackEnemy(Transform attackOrigin, float attackRadius, string attackType, LayerMask enemyMask, int attackDamage, Vector3 attackerPosition, GameObject attacker, float cooldownTime, out float cooldownTimer)
+    {
+        if (attackType == "Bite") 
+        {
+            Collider2D[] enemiesInRange = Physics2D.OverlapCircleAll(attackOrigin.position, attackRadius, enemyMask);
+            foreach (var enemy in enemiesInRange)
+            {
+                enemy.GetComponent<HealthManager>().TakeDamage(attackDamage, attackerPosition, attacker);
+                SoundEffectManager.Play("Bite");
+                MusicManager.OnPlayerAttack();
+            }
+
+            cooldownTimer = cooldownTime;
+        }
+        else if (attackType == "Dash") //Made this into a seperate function incase I get time to turn this into a looped event while dash is occuring
+        {
+            Collider2D[] enemiesInRange = Physics2D.OverlapCircleAll(attackOrigin.position, attackRadius, enemyMask);
+            foreach (var enemy in enemiesInRange)
+            {
+                enemy.GetComponent<HealthManager>().TakeDamage(attackDamage, attackerPosition, attacker);
+                SoundEffectManager.Play("Bite");
+            }
+
+            cooldownTimer = cooldownTime; 
+        }
+        else
+        {
+            cooldownTimer = 0f; // Or some fallback/default value
+        }
+    }
+
+
 
     private void OnDrawGizmos()
     {

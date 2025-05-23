@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "Team4Project.sln"
+    "dotnet.defaultSolution": "Cloning Edition.sln"
 }

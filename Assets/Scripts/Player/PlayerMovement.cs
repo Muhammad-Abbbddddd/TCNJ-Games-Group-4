@@ -9,8 +9,10 @@ public class PlayerMovement : MonoBehaviour
     bool isFacingRight = true;
     public ParticleSystem smokeFX;
     public ParticleSystem speedFX;
+    public ParticleSystem statusFX;
     BoxCollider2D playerCollider;
     TrailRenderer trailRenderer;
+    private bool hasAirDashed = false;
 
     [Header("Movement")]
     public float moveSpeed = 5f;
@@ -18,14 +20,19 @@ public class PlayerMovement : MonoBehaviour
     float speedMultiplyer = 1f;
 
     [Header("Dashing")]
-    public float dashSpeed = 20f;
-    public float dashDuration = 0.1f;
+    public float dashSpeed = 15f;
+    public float dashDuration = 0.2f;
     public float dashCooldown = 0.1f;
     bool isDashing;
     bool canDash = true;
+    private GameObject dashHitbox;
+
+    [Header("Post-Dash Speed")]
+    public float postDashSpeedMultiplier = 2.083333f;
+    private bool postDashBoost = false;
 
     [Header("Jumping")]
-    public float jumpPower = 10f;
+    public float jumpPower = 16f;
     public int maxJumps = 2;
     private int jumpsRemaining;
     private float coyoteTime = 0.1f;
@@ -39,8 +46,8 @@ public class PlayerMovement : MonoBehaviour
     bool isOnPlatform;
 
     [Header("Gravity")]
-    public float baseGravity = 2f;
-    public float maxFallSpeed = 18f;
+    public float baseGravity = 4f;
+    public float maxFallSpeed = 10f;
     public float fallGravityMult = 2f;
 
     [Header("WallCheck")]
@@ -62,6 +69,27 @@ public class PlayerMovement : MonoBehaviour
 
     [HideInInspector] public float defaultMoveSpeed;
     [HideInInspector] public float defaultJumpPower;
+
+    [Header("Debuff")]
+    public bool isDebuffActive = false;
+    public GameObject dashHitboxPrefab;
+    public GameObject wallBreakEffect;
+    public GameObject debuffEffectPrefab;
+
+    private GameObject activeDebuffEffect;
+
+    public Transform attackOrigin;
+    public float attackRadius = 1f;
+    public LayerMask enemyMask;
+
+    public float cooldownTime = .5f;
+    private float cooldownTimer = 0f;
+
+    public int attackDamage = 25;
+
+    [Header("Player Clone")]
+    public GameObject playerClonePrefab;
+    private GameObject activeClone;
 
 
     private void Start()
@@ -90,30 +118,43 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        animator.SetFloat("yVelocity", rb.velocity.y);
-        animator.SetFloat("magnitude", rb.velocity.magnitude > 0.1 ? 1 : 0);
-        animator.SetBool("isWallSliding", isWallSliding);
+     animator.SetFloat("yVelocity", rb.velocity.y);
+    animator.SetFloat("magnitude", rb.velocity.magnitude > 0.1 ? 1 : 0);
+    animator.SetBool("isWallSliding", isWallSliding);
 
-        if (isDashing) return;
-
-        GroundCheck();
-        ProcessGravity();
-        ProcessWallSlide();
-        ProcessWallJump();
-        ProcessMovement();
-        HandleFootstepSounds();
-
-    }
-
-    private void ProcessMovement()
+    if (isDebuffActive && Keyboard.current.cKey.wasPressedThisFrame)
     {
-        if (!isWallJumping)
-        {
-            rb.velocity = new Vector2(horizontalMovement * moveSpeed * speedMultiplyer, rb.velocity.y);
-            Flip();
-        }
+        SpawnPlayerClone();
     }
 
+    if (isDashing) return;
+
+    GroundCheck();
+
+    // Reset post-dash boost when grounded and not dashing
+    if (isGrounded && !isDashing && postDashBoost)
+    {
+        postDashBoost = false;
+    }
+
+    ProcessGravity();
+    ProcessWallSlide();
+    ProcessWallJump();
+    ProcessMovement();
+    HandleFootstepSounds();
+    }
+
+private void ProcessMovement()
+{
+    if (!isWallJumping)
+    {
+        float currentSpeed = moveSpeed * speedMultiplyer;
+        if (postDashBoost)
+            currentSpeed *= postDashSpeedMultiplier;
+        rb.velocity = new Vector2(horizontalMovement * currentSpeed, rb.velocity.y);
+        Flip();
+    }
+}
     public void Move(InputAction.CallbackContext context)
     {
         horizontalMovement = context.ReadValue<Vector2>().x;
@@ -121,8 +162,12 @@ public class PlayerMovement : MonoBehaviour
 
     public void Dash(InputAction.CallbackContext context)
     {
-        if (context.performed && canDash)
+        if (context.performed && canDash && (isGrounded || !hasAirDashed))
         {
+            if (!isGrounded)
+            {
+                hasAirDashed = true; // Mark air dash as used
+            }
             StartCoroutine(DashCoroutine());
         }
     }
@@ -194,19 +239,43 @@ public class PlayerMovement : MonoBehaviour
         isDashing = true;
         trailRenderer.emitting = true;
 
+        // Reset wall jump state to allow movement after dash
+        isWallJumping = false;
+        CancelInvoke(nameof(CancelWallJump));
+
+        float originalGravity = rb.gravityScale;
+        rb.gravityScale = 0f;
+        rb.velocity = Vector2.zero;
+        yield return null;
+
         float dashDirection = isFacingRight ? 1f : -1f;
-        rb.velocity = new Vector2(dashDirection * dashSpeed, rb.velocity.y);
+        rb.velocity = new Vector2(dashDirection * dashSpeed, 0f);
+
+         // Enable dash hitbox during debuff
+        if (isDebuffActive == true && dashHitboxPrefab != null)
+        {
+            Debug.Log("Dash Hit");
+            PlayerMelee.AttackEnemy(attackOrigin, attackRadius, "Dash", enemyMask, attackDamage, transform.position, gameObject, cooldownTime, out cooldownTimer);
+        }
 
         yield return new WaitForSeconds(dashDuration);
 
+        rb.gravityScale = originalGravity;
         rb.velocity = new Vector2(0f, rb.velocity.y);
+
         isDashing = false;
         trailRenderer.emitting = false;
+
+         if (dashHitbox != null)
+            Destroy(dashHitbox);
+
         Physics2D.IgnoreLayerCollision(7, 8, false);
+
+        postDashBoost = true; // Enable post-dash speed boost
 
         yield return new WaitForSeconds(dashCooldown);
         canDash = true;
-    }
+    }   
 
     private void JumpFX()
     {
@@ -221,6 +290,7 @@ public class PlayerMovement : MonoBehaviour
             jumpsRemaining = maxJumps;
             isGrounded = true;
             coyoteTimeCounter = coyoteTime;
+            hasAirDashed = false; // Reset air dash when grounded
         }
         else
         {
@@ -322,6 +392,55 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    private void SpawnPlayerClone()
+    {
+        if (activeClone != null)
+        {
+            Destroy(activeClone);
+        }
+
+        if (playerClonePrefab != null)
+        {
+            Vector3 spawnPosition = transform.position;
+            Quaternion rotation = Quaternion.identity;
+            activeClone = Instantiate(playerClonePrefab, spawnPosition, rotation);
+        }
+    }
+
+    public bool IsDebuffActive()
+    {
+        return isDebuffActive;
+    }
+
+    public void ActivateDebuff()
+    {
+        if (isDebuffActive) return;
+
+        isDebuffActive = true;
+        moveSpeed *= 0.75f;
+        jumpPower *= 0.75f;
+
+        if (debuffEffectPrefab != null)
+        {   
+            statusFX.Play();
+        }
+
+        StartCoroutine(EndDebuffAfterDelay(5f));
+    }
+
+    private IEnumerator EndDebuffAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        moveSpeed = 5f;
+        jumpPower = 16f;
+        isDebuffActive = false;
+        statusFX.Stop();
+        if (activeDebuffEffect != null)
+            Destroy(activeDebuffEffect);
+            
+    }
+    
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.white;
