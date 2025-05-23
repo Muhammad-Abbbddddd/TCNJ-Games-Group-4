@@ -122,9 +122,13 @@ public class PlayerMovement : MonoBehaviour
     animator.SetFloat("magnitude", rb.velocity.magnitude > 0.1 ? 1 : 0);
     animator.SetBool("isWallSliding", isWallSliding);
 
-    if (isDebuffActive && Keyboard.current.cKey.wasPressedThisFrame)
-    {
-        SpawnPlayerClone();
+        if (isDebuffActive && Keyboard.current.cKey.wasPressedThisFrame)
+        {
+            SpawnPlayerClone();
+         isDebuffActive = false;
+        statusFX.Stop();
+        if (activeDebuffEffect != null)
+            Destroy(activeDebuffEffect);
     }
 
     if (isDashing) return;
@@ -403,7 +407,7 @@ private void ProcessMovement()
         {
             Vector3 spawnPosition = transform.position;
             Quaternion rotation = Quaternion.identity;
-            activeClone = Instantiate(playerClonePrefab, spawnPosition, rotation);
+            activeClone = Instantiate(playerClonePrefab, spawnPosition + Vector3.down, rotation);
         }
     }
 
